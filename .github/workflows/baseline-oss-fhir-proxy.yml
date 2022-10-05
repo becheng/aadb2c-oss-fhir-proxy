@@ -16,7 +16,7 @@ on:
 env:
   TEMP_DIR_PATH: './tmp'
   FHIR_PROXY_BICEP_NAME: 'fhir-proxy.bicep'
-  FHIR_URL_DOMAIN: '.azurehealthcareapis.com'
+  FHIR_ENDPT_DOMAIN: '.fhir.azurehealthcareapis.com'
 
 defaults:
   run:
@@ -33,8 +33,10 @@ jobs:
     runs-on: ubuntu-latest
     environment: sample
     outputs:
-      fhir-name: ${{ steps.get-fhir-name.outputs.uniqueSuffix }} # output the suffix to other jobs
-
+      uniqueSuffix: ${{ steps.get-unique-names.outputs.uniqueSuffix }} 
+      fhirWorkspaceName: ${{ steps.get-unique-names.outputs.fhirWorkspaceName }} 
+      fhirName: ${{ steps.get-unique-names.outputs.fhirName }} 
+      
     steps:
 
       # checkout 
@@ -54,25 +56,30 @@ jobs:
       # 2. hash the id and take the first 8 chars of the hash
       # 3. set the output using the hash substring
     - name: generate unique suffix 
-      id: get-suffix
+      id: get-unique-names
       shell: bash
       run: |
         rsGroupId=$(az group list --query "[?name=='${{ secrets.AZURE_RG }}'].id" -o tsv)
         suffix=$(echo -n $rsGroupId | shasum | cut -c1-8)
         echo "::set-output name=uniqueSuffix::$suffix"
+        echo "::set-output name=fhirWorkspaceName::ws$suffix"
+        echo "::set-output name=fhirName::fhir$suffix"
         unset rsGroupId
         unset suffix
                
       # Deploy uisng bicep
+      # Important note: you cannot set the fhir service endpoint, it is automatically set by
+      # resource based on the workspaceName and the fhirName with a format of
+      # 'https://${workspaceName}-${fhirName}.fhir.azurehealthcareapis.com' 
+      # @TODO: change fhir+Suffix to be unique within the AHDS workspace
     - name: deploy-fhir
       uses: azure/arm-deploy@v1.0.8
       with:
         subscriptionId: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         resourceGroupName: ${{ secrets.AZURE_RG }}
         template: ./fhir-api.bicep
-        parameters: 'workspaceName=ws${{steps.get-suffix.outputs.uniqueSuffix}} 
-          fhirName=fhir${{steps.get-suffix.outputs.uniqueSuffix}} 
-          fhirServiceEndpoint=https://fhir${{steps.get-suffix.outputs.uniqueSuffix}}${{env.FHIR_URL_DOMAIN}}' 
+        parameters: 'workspaceName=${{steps.get-unique-names.outputs.fhirWorkspaceName}} 
+          fhirName=fhir${{steps.get-unique-names.outputs.fhirNameuniqueSuffix}}'
         failOnStdErr: false
 
 
@@ -106,26 +113,29 @@ jobs:
       # deploy using bicep
       # Note: we are not setting the params for fhirServerTenantName, fhirServerClientId and fhirServerSecret; the absence of these, 
       # tells the proxy to use its managed system identity (MSI) to authenicate with the fhir server
+      # format of fhir endpoint always: 'https://${workspaceName}-${fhirName}.fhir.azurehealthcareapis.com' 
     - name: deploy-fhir
       uses: azure/arm-deploy@v1.0.8
       with:
         subscriptionId: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         resourceGroupName: ${{ secrets.AZURE_RG }}
         template: ${{ env.TEMP_DIR_PATH }}/${{ env.FHIR_PROXY_BICEP_NAME }}
-        parameters: 'uniqueValue=${{needs.deploy-az-infra.outputs.uniqueSuffix}} 
-          fhirServerUrl=https://fhir${{steps.get-suffix.outputs.uniqueSuffix}}${{env.FHIR_URL_DOMAIN}}
-          fhirServerResource=https://fhir${{steps.get-suffix.outputs.uniqueSuffix}}${{env.FHIR_URL_DOMAIN}}'           
+        parameters: 'uniqueValue=${{needs.deploy-infra-fhir-service.outputs.uniqueSuffix}} 
+          fhirServerUrl=https://${{needs.deploy-infra-fhir-service.outputs.fhirWorkspaceName}}-${{needs.deploy-infra-fhir-service.outputs.fhirName}}${{env.FHIR_ENDPT_DOMAIN}}
+          fhirServerResource=https://${{needs.deploy-infra-fhir-service.outputs.fhirWorkspaceName}}-${{needs.deploy-infra-fhir-service.outputs.fhirName}}${{env.FHIR_ENDPT_DOMAIN}}'           
         failOnStdErr: false
 
       # Leverage the proxy's MSI and assign it with 'FHIR Data Contributor' rbac role to the fhir server 
       # Based on the fhir-api.bicep fhir resource name is using a format of '${workspaceName}/${fhirName}'
+      # format of the fhirs resource always: ${workspaceName}/${fhirName}
     - name: fhir-server-role-assignments
       shell: bash
       run: |
-        fhirServerResourceName='ws${{needs.deploy-az-infra.outputs.uniqueSuffix}}/fhir${{needs.deploy-az-infra.outputs.uniqueSuffix}}' 
+        fhirServerResourceName='${{needs.deploy-infra-fhir-service.outputs.fhirWorkspaceName}}/${{needs.deploy-infra-fhir-service.outputs.fhirName}}' 
         fhirServerMSIPrincipalId=$(az resource list --name "$fhirServerResourceName" --query "[].identity.principalId" -o tsv)
         fhirServerResourceId=$(az resource list --name "$fhirServerResourceName" --query "[].id" -o tsv)
-
+        unset fhirServerResourceName
+        
         echo "fhirServerMSIPrincipalId = $fhirServerMSIPrincipalId"
         echo "fhirServerResourceId = $fhirServerResourceId"
         

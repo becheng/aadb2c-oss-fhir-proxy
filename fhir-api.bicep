@@ -3,13 +3,12 @@ param workspaceName string
 param fhirName string
 param tenantId string = subscription().tenantId
 param location string = resourceGroup().location
-param fhirServiceEndpoint string = 'https://${workspaceName}-${fhirName}.fhir.azurehealthcareapis.com'
 
 //Define variables
 var fhirservicename = '${workspaceName}/${fhirName}'
 var loginURL = environment().authentication.loginEndpoint
 var authority = '${loginURL}${tenantId}'
-//var audience = 'https://${workspaceName}-${fhirName}.fhir.azurehealthcareapis.com'
+var audience = 'https://${workspaceName}-${fhirName}.fhir.azurehealthcareapis.com'
 
 //Create a workspace
 resource ahdsWorkspace 'Microsoft.HealthcareApis/workspaces@2021-06-01-preview' = {
@@ -32,7 +31,7 @@ resource FHIRresource 'Microsoft.HealthcareApis/workspaces/fhirservices@2021-11-
     accessPolicies: []
     authenticationConfiguration: {
       authority: authority
-      audience: fhirServiceEndpoint
+      audience: audience
       smartProxyEnabled: false
     }
   }
