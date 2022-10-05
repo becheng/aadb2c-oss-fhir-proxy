@@ -85,7 +85,7 @@ jobs:
 
   # job2: deploy the oss fhir proxy 
   deploy-and-build-fhir-proxy:
-    if: ${{ false }} #disable for now
+    #if: ${{ false }} #disables the job
     needs: [deploy-infra-fhir-service]
     runs-on: ubuntu-latest
     environment: sample
