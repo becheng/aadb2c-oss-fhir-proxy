@@ -124,10 +124,7 @@ jobs:
         parameters: 'uniqueValue=${{needs.deploy-infra-fhir-service.outputs.uniqueSuffix}} 
           fhirServerUrl=https://${{needs.deploy-infra-fhir-service.outputs.fhirWorkspaceName}}-${{needs.deploy-infra-fhir-service.outputs.fhirName}}${{env.FHIR_ENDPT_DOMAIN}}
           fhirServerResource=https://${{needs.deploy-infra-fhir-service.outputs.fhirWorkspaceName}}-${{needs.deploy-infra-fhir-service.outputs.fhirName}}${{env.FHIR_ENDPT_DOMAIN}}
-          resourceTags=fhir
-          fhirServerClientId="test"
-          fhirServerSecret=""
-          fhirServerTenantName=""'
+          fhirServerClientId="" fhirServerSecret="" fhirServerTenantName=""'
            
         failOnStdErr: false
 
