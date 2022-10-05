@@ -34,7 +34,6 @@ jobs:
     environment: sample
     outputs:
       fhir-name: ${{ steps.get-fhir-name.outputs.uniqueSuffix }} # output the suffix to other jobs
-      #fhir-name: ${{ steps.get-fhir-name.outputs.fhirServiceEndpoint }} # output the fhir endpoint to other jobs
 
     steps:
 
@@ -64,15 +63,7 @@ jobs:
         unset rsGroupId
         unset suffix
                
-      # generate fcnAppName based on pefcn+suffix 
-    # - name: generate fhir name
-    #   id: get-fhir-name
-    #   shell: bash
-    #   run: |
-    #     fhirName="bcfhir${{steps.get-suffix.outputs.uniqueSuffix}}"
-    #     echo "::set-output name=fhirName::$fhirName"
-      
-      # Deploy Bicep file
+      # Deploy uisng bicep
     - name: deploy-fhir
       uses: azure/arm-deploy@v1.0.8
       with:
@@ -83,6 +74,7 @@ jobs:
           fhirName=fhir${{steps.get-suffix.outputs.uniqueSuffix}} 
           fhirServiceEndpoint=https://fhir${{steps.get-suffix.outputs.uniqueSuffix}}${{env.FHIR_URL_DOMAIN}}' 
         failOnStdErr: false
+
 
   # job2: deploy the oss fhir proxy 
   deploy-and-build-fhir-proxy:
@@ -111,7 +103,7 @@ jobs:
         mkdir ${{ env.TEMP_DIR_PATH }}
         curl https://raw.githubusercontent.com/microsoft/fhir-proxy/main/templates/azuredeploy.bicep --output ${{ env.TEMP_DIR_PATH }}/${{ env.FHIR_PROXY_BICEP_NAME }}
 
-      # Deploy Bicep file
+      # deploy using bicep
       # Note: we are not setting the params for fhirServerTenantName, fhirServerClientId and fhirServerSecret; the absence of these, 
       # tells the proxy to use its managed system identity (MSI) to authenicate with the fhir server
     - name: deploy-fhir
@@ -122,8 +114,7 @@ jobs:
         template: ${{ env.TEMP_DIR_PATH }}/${{ env.FHIR_PROXY_BICEP_NAME }}
         parameters: 'uniqueValue=${{needs.deploy-az-infra.outputs.uniqueSuffix}} 
           fhirServerUrl=https://fhir${{steps.get-suffix.outputs.uniqueSuffix}}${{env.FHIR_URL_DOMAIN}}
-          fhirServerResource=https://fhir${{steps.get-suffix.outputs.uniqueSuffix}}${{env.FHIR_URL_DOMAIN}}
-          '           
+          fhirServerResource=https://fhir${{steps.get-suffix.outputs.uniqueSuffix}}${{env.FHIR_URL_DOMAIN}}'           
         failOnStdErr: false
 
       # Leverage the proxy's MSI and assign it with 'FHIR Data Contributor' rbac role to the fhir server 
