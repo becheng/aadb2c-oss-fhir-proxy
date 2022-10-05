@@ -79,7 +79,7 @@ jobs:
         resourceGroupName: ${{ secrets.AZURE_RG }}
         template: ./fhir-api.bicep
         parameters: 'workspaceName=${{steps.get-unique-names.outputs.fhirWorkspaceName}} 
-          fhirName=fhir${{steps.get-unique-names.outputs.fhirNameuniqueSuffix}}'
+          fhirName=${{steps.get-unique-names.outputs.fhirName}}'
         failOnStdErr: false
 
 
@@ -135,7 +135,7 @@ jobs:
         fhirServerMSIPrincipalId=$(az resource list --name "$fhirServerResourceName" --query "[].identity.principalId" -o tsv)
         fhirServerResourceId=$(az resource list --name "$fhirServerResourceName" --query "[].id" -o tsv)
         unset fhirServerResourceName
-        
+
         echo "fhirServerMSIPrincipalId = $fhirServerMSIPrincipalId"
         echo "fhirServerResourceId = $fhirServerResourceId"
         
