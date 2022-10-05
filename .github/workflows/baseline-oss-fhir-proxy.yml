@@ -79,9 +79,9 @@ jobs:
         subscriptionId: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         resourceGroupName: ${{ secrets.AZURE_RG }}
         template: ./fhir-api.bicep
-        parameters: '''workspaceName=ws${{steps.get-suffix.outputs.uniqueSuffix}} 
+        parameters: 'workspaceName=ws${{steps.get-suffix.outputs.uniqueSuffix}} 
           fhirName=fhir${{steps.get-suffix.outputs.uniqueSuffix}} 
-          fhirServiceEndpoint=https://fhir${{steps.get-suffix.outputs.uniqueSuffix}}${{env.FHIR_URL_DOMAIN}}''' 
+          fhirServiceEndpoint=https://fhir${{steps.get-suffix.outputs.uniqueSuffix}}${{env.FHIR_URL_DOMAIN}}' 
         failOnStdErr: false
 
   # job2: deploy the oss fhir proxy 
@@ -121,8 +121,8 @@ jobs:
         resourceGroupName: ${{ secrets.AZURE_RG }}
         template: ${{ env.TEMP_DIR_PATH }}/${{ env.FHIR_PROXY_BICEP_NAME }}
         parameters: 'uniqueValue=${{needs.deploy-az-infra.outputs.uniqueSuffix}} 
-          fhirServerUrl=https://fhir${{steps.get-suffix.outputs.uniqueSuffix}}${{FHIR_URL_DOMAIN}}
-          fhirServerResource=https://fhir${{steps.get-suffix.outputs.uniqueSuffix}}${{FHIR_URL_DOMAIN}}
+          fhirServerUrl=https://fhir${{steps.get-suffix.outputs.uniqueSuffix}}${{env.FHIR_URL_DOMAIN}}
+          fhirServerResource=https://fhir${{steps.get-suffix.outputs.uniqueSuffix}}${{env.FHIR_URL_DOMAIN}}
           '           
         failOnStdErr: false
 
