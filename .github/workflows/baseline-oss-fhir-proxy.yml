@@ -121,11 +121,11 @@ jobs:
         subscriptionId: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         resourceGroupName: ${{ secrets.AZURE_RG }}
         template: ${{ env.TEMP_DIR_PATH }}/${{ env.FHIR_PROXY_BICEP_NAME }}
-        parameters: 'uniqueValue=${{needs.deploy-infra-fhir-service.outputs.uniqueSuffix}} 
+        parameters: 'fhirProxyName=fhirproxy${{needs.deploy-infra-fhir-service.outputs.uniqueSuffix}}
+          uniqueValue=${{needs.deploy-infra-fhir-service.outputs.uniqueSuffix}} 
           fhirServerUrl=https://${{needs.deploy-infra-fhir-service.outputs.fhirWorkspaceName}}-${{needs.deploy-infra-fhir-service.outputs.fhirName}}${{env.FHIR_ENDPT_DOMAIN}}
           fhirServerResource=https://${{needs.deploy-infra-fhir-service.outputs.fhirWorkspaceName}}-${{needs.deploy-infra-fhir-service.outputs.fhirName}}${{env.FHIR_ENDPT_DOMAIN}}
-          fhirServerClientId="" fhirServerSecret="" fhirServerTenantName="" resourceTags={}'
-           
+          fhirServerClientId="" fhirServerSecret="" fhirServerTenantName="" resourceTags={}'           
         failOnStdErr: false
 
       # Leverage the proxy's MSI and assign it with 'FHIR Data Contributor' rbac role to the fhir server 
@@ -134,16 +134,20 @@ jobs:
     - name: fhir-server-role-assignments
       shell: bash
       run: |
+        fhirProxyName=fhirproxy${{needs.deploy-infra-fhir-service.outputs.uniqueSuffix}}
         fhirServerResourceName='${{needs.deploy-infra-fhir-service.outputs.fhirWorkspaceName}}/${{needs.deploy-infra-fhir-service.outputs.fhirName}}' 
-        fhirServerMSIPrincipalId=$(az resource list --name "$fhirServerResourceName" --query "[].identity.principalId" -o tsv)
+        
+        fhirProxyMSIPrincipalId=$(az resource list --name "$fhirProxyName" --query "[].identity.principalId" -o tsv)        
         fhirServerResourceId=$(az resource list --name "$fhirServerResourceName" --query "[].id" -o tsv)
+
+        unset fhirProxyName
         unset fhirServerResourceName
 
-        echo "fhirServerMSIPrincipalId = $fhirServerMSIPrincipalId"
+        echo "fhirProxyMSIPrincipalId = $fhirProxyMSIPrincipalId"
         echo "fhirServerResourceId = $fhirServerResourceId"
         
         az role assignment create \
-            --assignee-object-id "$fhirServerMSIPrincipalId" \
+            --assignee-object-id "$fhirProxyMSIPrincipalId" \
             --role "FHIR Data Contributor" \
             --assignee-principal-type "ServicePrincipal" \
             --scope $fhirServerResourceId
