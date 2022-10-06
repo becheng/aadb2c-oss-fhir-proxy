@@ -110,6 +110,12 @@ jobs:
         mkdir ${{ env.TEMP_DIR_PATH }}
         curl https://raw.githubusercontent.com/microsoft/fhir-proxy/main/templates/azuredeploy.bicep --output ${{ env.TEMP_DIR_PATH }}/${{ env.FHIR_PROXY_BICEP_NAME }}
 
+    - name: set-fhir-proxy-app-name
+      id: set-fhir-proxy-app-name
+      shell: bash
+      run: |
+        echo "::set-output name=fhirProxyAppName::fhirproxy${{needs.deploy-infra-fhir-service.outputs.uniqueSuffix}}"
+
       # deploy using bicep
       # Note 1: Setting the params: fhirServerTenantName, fhirServerClientId, fhirServerSecret to empty string; the absence of these, 
       # tells the proxy to use its managed system identity (MSI) to authenicate with the fhir server.
@@ -121,7 +127,7 @@ jobs:
         subscriptionId: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         resourceGroupName: ${{ secrets.AZURE_RG }}
         template: ${{ env.TEMP_DIR_PATH }}/${{ env.FHIR_PROXY_BICEP_NAME }}
-        parameters: 'fhirProxyName=fhirproxy${{needs.deploy-infra-fhir-service.outputs.uniqueSuffix}}
+        parameters: 'fhirProxyName=${{steps.set-fhir-proxy-app-name.outputs.fhirProxyAppName}}
           uniqueValue=${{needs.deploy-infra-fhir-service.outputs.uniqueSuffix}} 
           fhirServerUrl=https://${{needs.deploy-infra-fhir-service.outputs.fhirWorkspaceName}}-${{needs.deploy-infra-fhir-service.outputs.fhirName}}${{env.FHIR_ENDPT_DOMAIN}}
           fhirServerResource=https://${{needs.deploy-infra-fhir-service.outputs.fhirWorkspaceName}}-${{needs.deploy-infra-fhir-service.outputs.fhirName}}${{env.FHIR_ENDPT_DOMAIN}}
@@ -131,10 +137,11 @@ jobs:
       # Leverage the proxy's MSI and assign it with 'FHIR Data Contributor' rbac role to the fhir server 
       # Based on the fhir-api.bicep fhir resource name is using a format of '${workspaceName}/${fhirName}'
       # format of the fhirs resource always: ${workspaceName}/${fhirName}
+      # @TODO: consider moving this to complemetry bicep file  
     - name: fhir-server-role-assignments
       shell: bash
       run: |
-        fhirProxyName=fhirproxy${{needs.deploy-infra-fhir-service.outputs.uniqueSuffix}}
+        fhirProxyName=${{steps.set-fhir-proxy-app-name.outputs.fhirProxyAppName}}
         fhirServerResourceName='${{needs.deploy-infra-fhir-service.outputs.fhirWorkspaceName}}/${{needs.deploy-infra-fhir-service.outputs.fhirName}}' 
         
         fhirProxyMSIPrincipalId=$(az resource list --name "$fhirProxyName" --query "[].identity.principalId" -o tsv)        
@@ -151,3 +158,24 @@ jobs:
             --role "FHIR Data Writer" \
             --assignee-principal-type "ServicePrincipal" \
             --scope $fhirServerResourceId
+
+    # @TODO: add ez auth to the fhirproxy function with app roles
+    # - AAD auth
+    # - Allow Unauthenicated access for the the app service auth settings
+    # @TODO: consider moving this to complemetry bicep file
+    # @TODO: run az extension add --name authV2 to add teh authV2 CLI extension  
+    # --aad-allowed-token-audiences "https://$fhirProxyName.azurewebsites.net/.auth/login/aad/callback" \
+    - name: enable-fhir-proxy-ezauth
+      shell: bash
+      run: |
+        rg=${{secrets.AZURE_RG}}
+        fhirProxyName=${{steps.set-fhir-proxy-app-name.outputs.fhirProxyAppName}}
+        ezauthClientId=${{secrets.EZAUTH_FHIR_PROXY_AAD_CLIENTID}}
+        ezauthClientSecret=${{secrets.EZAUTH_FHIR_PROXY_AAD_SECRET}}
+        authorityTenandId=${{secrets.AZURE_TENANT_ID}}
+
+        az webapp auth update -g "$rg" -n "$fhirProxyName" --enabled true \
+          --action LoginWithAzureActiveDirectory \
+          --aad-client-id "$ezauthClientId" \
+          --aad-client-secret "$ezauthClientSecret" \
+          --aad-token-issuer-url "https://login.microsoftonline.com/$authorityTenandId/v2.0" 
