@@ -145,9 +145,9 @@ jobs:
 
         echo "fhirProxyMSIPrincipalId = $fhirProxyMSIPrincipalId"
         echo "fhirServerResourceId = $fhirServerResourceId"
-        
+
         az role assignment create \
             --assignee-object-id "$fhirProxyMSIPrincipalId" \
-            --role "FHIR Data Contributor" \
+            --role "FHIR Data Writer" \
             --assignee-principal-type "ServicePrincipal" \
             --scope $fhirServerResourceId
