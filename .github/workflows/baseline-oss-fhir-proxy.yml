@@ -133,8 +133,18 @@ jobs:
           fhirServerResource=https://${{needs.deploy-infra-fhir-service.outputs.fhirWorkspaceName}}-${{needs.deploy-infra-fhir-service.outputs.fhirName}}${{env.FHIR_ENDPT_DOMAIN}}
           fhirServerClientId="" fhirServerSecret="" fhirServerTenantName="" resourceTags={}'           
         failOnStdErr: false
+      
       # @TODO: Discovered a bug in the proxy, where if the  fhirClientId/Secret/TenantName is not set, then the proxy's appsettings to the Keyvault is broken the 
       # the proxy errors when called.  Need to build a script to remove those 3 values from app settings.
+      #  az webapp config appsettings set -n "fhirproxy35d75573" -g "fhir-baseline-rg" --settings FS-CLIENT-ID=''
+      #  az webapp config appsettings set -n "fhirproxy35d75573" -g "fhir-baseline-rg" --settings FS-TENANT-NAME=''
+      #  az webapp config appsettings set -n "fhirproxy35d75573" -g "fhir-baseline-rg" --settings FS-SECRET=''
+    - name: set-proxy-appsettings
+      shell: bash
+      run: |
+        az webapp config appsettings set -n "${{steps.set-fhir-proxy-app-name.outputs.fhirProxyAppName}}" -g "${{secrets.AZURE_RG}}" --settings FS-CLIENT-ID=''
+        az webapp config appsettings set -n "${{steps.set-fhir-proxy-app-name.outputs.fhirProxyAppName}}" -g "${{secrets.AZURE_RG}}" --settings FS-TENANT-NAME=''
+        az webapp config appsettings set -n "${{steps.set-fhir-proxy-app-name.outputs.fhirProxyAppName}}" -g "${{secrets.AZURE_RG}}" --settings FS-SECRET=''
 
       # Leverage the proxy's MSI and assign it with 'FHIR Data Contributor' rbac role to the fhir server 
       # Based on the fhir-api.bicep fhir resource name is using a format of '${workspaceName}/${fhirName}'
