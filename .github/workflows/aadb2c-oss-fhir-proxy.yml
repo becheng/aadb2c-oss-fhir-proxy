@@ -180,6 +180,7 @@ jobs:
 
     # @TODO: consider moving this to complemetry bicep file
   # *** CHANGE 4: B2C specific secrets to set the fcn app's ezauth *** 
+          # --redirect-provider AzureActiveDirectory \
     - name: enable-b2c-fhir-proxy-ezauth
       shell: bash
       run: |
@@ -193,7 +194,6 @@ jobs:
         b2cPolicyName=${{secrets.AZURE_B2C_POLICY_NAME}}
 
         az webapp auth update -g "$rg" -n "$fhirProxyName" --enabled true --enable-token-store true \
-          --redirect-provider AzureActiveDirectory \
           --unauthenticated-client-action=AllowAnonymous \
           --set globalValidation.requireAuthentication=false \
           --set identityProviders.azureActiveDirectory.registration.clientId=$ezauthClientId \
