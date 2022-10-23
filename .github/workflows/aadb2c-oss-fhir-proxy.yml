@@ -60,7 +60,7 @@ jobs:
       id: get-unique-names
       shell: bash
       run: |
-        rsGroupId=$(az group list --query "[?name=='fhir-b2c-proxy-rg'].id" -o tsv)
+        rsGroupId=$(az group list --query "[?name=='${{ secrets.AZURE_RG }}'].id" -o tsv)
         suffix="35d75573"
 
         echo "::set-output name=uniqueSuffix::$suffix"

@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<TrustFrameworkPolicy 
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+  xmlns:xsd="http://www.w3.org/2001/XMLSchema" 
+  xmlns="http://schemas.microsoft.com/online/cpim/schemas/2013/06" 
+  PolicySchemaVersion="0.3.0.0" 
+  TenantId="bechengb2c.onmicrosoft.com" 
+  PolicyId="B2C_1A_approle_group_susi" 
+  PublicPolicyUri="http://bechengb2c.onmicrosoft.com/B2C_1A_approle_group_susi">
+  
+  <BasePolicy>
+    <TenantId>bechengb2c.onmicrosoft.com</TenantId>
+    <PolicyId>B2C_1A_TrustFrameworkExtensions</PolicyId>
+  </BasePolicy>
+
+  <BuildingBlocks>
+    
+    <ClaimsSchema>
+      <ClaimType Id="groups">
+        <DisplayName>Comma delimited list of group names</DisplayName>
+        <DataType>stringCollection</DataType>
+        <UserInputType>Readonly</UserInputType>
+      </ClaimType>
+      <ClaimType Id="roles">
+        <DisplayName>Comma delimited list of appRoleAssignment names</DisplayName>
+        <DataType>stringCollection</DataType>
+        <UserInputType>Readonly</UserInputType>
+      </ClaimType>
+    </ClaimsSchema>
+
+  </BuildingBlocks>
+
+  <ClaimsProviders>
+
+    <ClaimsProvider>
+      <DisplayName>approle-group-api</DisplayName>
+      <TechnicalProfiles>
+        <TechnicalProfile Id="GetUserAppRolesGroups">
+          <DisplayName>Retrieves security groups and app roles assigned to the user</DisplayName>
+          <Protocol Name="Proprietary" Handler="Web.TPEngine.Providers.RestfulProvider, Web.TPEngine, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null" />
+          <Metadata>
+            <Item Key="ServiceUrl">https://yourname.azurewebsites.net/api/get-aad-groups-approles</Item>
+            <Item Key="AuthenticationType">None</Item>
+            <Item Key="SendClaimsIn">Body</Item>
+            <Item Key="AllowInsecureAuthInProduction">true</Item>
+            <Item Key="IncludeClaimResolvingInClaimsHandling">true</Item>
+          </Metadata>
+          <InputClaims>
+            <InputClaim Required="true" ClaimTypeReferenceId="objectId" /><!-- b2c user objectId -->
+            <InputClaim ClaimTypeReferenceId="client_id" PartnerClaimType="clientId"  DefaultValue="{OIDC:ClientId}" /> <!-- the b2c app with the custom app roles that user is signing into to-->
+          </InputClaims>
+          <OutputClaims>
+            <OutputClaim ClaimTypeReferenceId="roles" />
+            <OutputClaim ClaimTypeReferenceId="groups" />
+          </OutputClaims>
+          <UseTechnicalProfileForSessionManagement ReferenceId="SM-Noop" />
+        </TechnicalProfile>
+      </TechnicalProfiles>
+    </ClaimsProvider>
+  </ClaimsProviders>
+
+  <UserJourneys>
+    <UserJourney Id="SignUpOrSignIn">
+      <OrchestrationSteps>
+        <!-- get AppRoleAssignment -->
+        <OrchestrationStep Order="7" Type="ClaimsExchange">
+          <ClaimsExchanges>
+            <ClaimsExchange Id="GetUserAppRolesGroups" TechnicalProfileReferenceId="GetUserAppRolesGroups" />
+          </ClaimsExchanges>
+        </OrchestrationStep>
+
+        <OrchestrationStep Order="8" Type="SendClaims" CpimIssuerTechnicalProfileReferenceId="JwtIssuer" />
+      </OrchestrationSteps>
+      <ClientDefinition ReferenceId="DefaultWeb" />
+    </UserJourney>
+  </UserJourneys>
+
+  <RelyingParty>
+    <DefaultUserJourney ReferenceId="SignUpOrSignIn" />
+    <UserJourneyBehaviors>
+      <ScriptExecution>Allow</ScriptExecution>
+    </UserJourneyBehaviors>
+    <TechnicalProfile Id="PolicyProfile">
+      <DisplayName>PolicyProfile</DisplayName>
+      <Protocol Name="OpenIdConnect" />
+      <OutputClaims>
+        <OutputClaim ClaimTypeReferenceId="displayName" />
+        <OutputClaim ClaimTypeReferenceId="givenName" />
+        <OutputClaim ClaimTypeReferenceId="surname" />
+        <OutputClaim ClaimTypeReferenceId="signInName" />                                         <!-- LocalAccount: whatever used to sign in with-->
+        <OutputClaim ClaimTypeReferenceId="signInNames.emailAddress" PartnerClaimType="email" />  <!-- LocalAccount: email -->
+        <OutputClaim ClaimTypeReferenceId="email" />                                              <!-- Other IDP: email -->
+        <OutputClaim ClaimTypeReferenceId="groups" />
+        <OutputClaim ClaimTypeReferenceId="roles" />        
+        <OutputClaim ClaimTypeReferenceId="objectId" PartnerClaimType="sub" />
+        <OutputClaim ClaimTypeReferenceId="identityProvider" />
+        <OutputClaim ClaimTypeReferenceId="tenantId" AlwaysUseDefaultValue="true" DefaultValue="{Policy:TenantObjectId}" />
+      </OutputClaims>
+      <SubjectNamingInfo ClaimType="sub" />
+    </TechnicalProfile>
+  </RelyingParty>  
+</TrustFrameworkPolicy>
