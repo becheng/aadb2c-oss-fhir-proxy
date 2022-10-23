@@ -57,7 +57,7 @@ jobs:
       # 2. hash the id and take the first 8 chars of the hash
       # 3. set the output using the hash substring
 
-      # ************* CHNANGED SECRETS RG AND HARDCODED REF TO FHIR SERVER VIA SUFFIC
+    # *** CHANGE 1: SECRETS.AZURE_RG AND HARDCODED REF TO FHIR SERVER VIA SUFFIX ***
     - name: generate unique suffix 
       id: get-unique-names
       shell: bash
@@ -79,7 +79,7 @@ jobs:
       # 'https://${workspaceName}-${fhirName}.fhir.azurehealthcareapis.com' 
       # @TODO: change fhir+Suffix to be unique within the AHDS workspace
 
-      # ************* SKIPPED FHIR SERVER DEPLOYMENT
+    # *** CHANGE 2: SKIPPED FHIR SERVER DEPLOYMENT ***
     # - name: deploy-fhir
     #   uses: azure/arm-deploy@v1.0.8
     #   with:
@@ -116,7 +116,7 @@ jobs:
         mkdir ${{ env.TEMP_DIR_PATH }}
         curl https://raw.githubusercontent.com/microsoft/fhir-proxy/main/templates/azuredeploy.bicep --output ${{ env.TEMP_DIR_PATH }}/${{ env.FHIR_PROXY_BICEP_NAME }}
 
-      # ************* CHNANGED TO THE B2CFHIRPROXY
+    # *** CHANGE 3: FHIRPROXYAPPNAME TO "B2C"+FHIRPROXY ***
     - name: set-fhir-proxy-app-name
       id: set-fhir-proxy-app-name
       shell: bash
@@ -179,21 +179,24 @@ jobs:
             --scope $fhirServerResourceId
 
     # @TODO: consider moving this to complemetry bicep file
-    # - name: enable-b2c-fhir-proxy-ezauth
-    #   shell: bash
-    #   run: |
-    #     az extension add --name authV2
+  # *** CHANGE 4: B2C specific secrets to set the fcn app's ezauth *** 
+    - name: enable-b2c-fhir-proxy-ezauth
+      shell: bash
+      run: |
+        az extension add --name authV2
 
-    #     rg=${{secrets.AZURE_B2C_RG}}
-    #     fhirProxyName=${{steps.set-fhir-proxy-app-name.outputs.fhirProxyAppName}}
-    #     ezauthClientId=${{secrets.EZAUTH_FHIR_PROXY_AAD_CLIENTID}}
-    #     ezauthClientSecret=${{secrets.EZAUTH_FHIR_PROXY_AAD_SECRET}}
-    #     authorityTenandId=${{secrets.AZURE_TENANT_ID}}
+        rg=${{secrets.AZURE_B2C_RG}}
+        fhirProxyName=${{steps.set-fhir-proxy-app-name.outputs.fhirProxyAppName}}
+        ezauthClientId=${{secrets.EZAUTH_B2C_FHIR_PROXY_AAD_CLIENTID}}
+        ezauthClientSecret=${{secrets.EZAUTH_B2C_FHIR_PROXY_AAD_SECRET}}
+        b2cTenantName=${{secrets.AZURE_B2C_TENANT_NAME}}
+        b2cPolicyName=${{secrets.AZURE_B2C_POLICY_NAME}}
 
-    #     az webapp auth update -g "$rg" -n "$fhirProxyName" --enabled true --enable-token-store true \
-    #       --redirect-provider AzureActiveDirectory \
-    #       --unauthenticated-client-action=AllowAnonymous \
-    #       --set globalValidation.requireAuthentication=false \
-    #       --set identityProviders.azureActiveDirectory.registration.clientId=$ezauthClientId \
-    #       --set identityProviders.azureActiveDirectory.registration.clientSecretSettingName=$ezauthClientSecret \
-    #       --set identityProviders.azureActiveDirectory.registration.openIdIssuer=https://login.microsoftonline.com/$authorityTenandId/v2.0
+        az webapp auth update -g "$rg" -n "$fhirProxyName" --enabled true --enable-token-store true \
+          --redirect-provider AzureActiveDirectory \
+          --unauthenticated-client-action=AllowAnonymous \
+          --set globalValidation.requireAuthentication=false \
+          --set identityProviders.azureActiveDirectory.registration.clientId=$ezauthClientId \
+          --set identityProviders.azureActiveDirectory.registration.clientSecretSettingName=$ezauthClientSecret \
+          --set identityProviders.azureActiveDirectory.registration.openIdIssuer=https://$b2cTenantName.b2clogin.com/$b2cTenantName.onmicrosoft.com/$b2cPolicyName/oauth2/v2.0/
+  
