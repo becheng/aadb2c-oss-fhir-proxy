@@ -56,16 +56,20 @@ jobs:
       # 1. retrieve the resouceGroup's id property
       # 2. hash the id and take the first 8 chars of the hash
       # 3. set the output using the hash substring
+
+      # ************* CHNANGED SECRETS RG AND HARDCODED REF TO FHIR SERVER VIA SUFFIC
     - name: generate unique suffix 
       id: get-unique-names
       shell: bash
       run: |
         rsGroupId=$(az group list --query "[?name=='${{ secrets.AZURE_B2C_RG }}'].id" -o tsv)
-        suffix="35d75573"
-
+        suffix=$(echo -n $rsGroupId | shasum | cut -c1-6)
         echo "::set-output name=uniqueSuffix::$suffix"
+        
+        suffix="35d75573"
         echo "::set-output name=fhirWorkspaceName::ws$suffix"
         echo "::set-output name=fhirName::fhir$suffix"
+        
         unset rsGroupId
         unset suffix
                
@@ -75,6 +79,7 @@ jobs:
       # 'https://${workspaceName}-${fhirName}.fhir.azurehealthcareapis.com' 
       # @TODO: change fhir+Suffix to be unique within the AHDS workspace
 
+      # ************* SKIPPED FHIR SERVER DEPLOYMENT
     # - name: deploy-fhir
     #   uses: azure/arm-deploy@v1.0.8
     #   with:
@@ -111,6 +116,7 @@ jobs:
         mkdir ${{ env.TEMP_DIR_PATH }}
         curl https://raw.githubusercontent.com/microsoft/fhir-proxy/main/templates/azuredeploy.bicep --output ${{ env.TEMP_DIR_PATH }}/${{ env.FHIR_PROXY_BICEP_NAME }}
 
+      # ************* CHNANGED TO THE B2CFHIRPROXY
     - name: set-fhir-proxy-app-name
       id: set-fhir-proxy-app-name
       shell: bash
