@@ -60,7 +60,7 @@ jobs:
       id: get-unique-names
       shell: bash
       run: |
-        rsGroupId=$(az group list --query "[?name=='${{ secrets.AZURE_RG }}'].id" -o tsv)
+        rsGroupId=$(az group list --query "[?name=='${{ secrets.AZURE_B2C_RG }}'].id" -o tsv)
         suffix="35d75573"
 
         echo "::set-output name=uniqueSuffix::$suffix"
@@ -79,7 +79,7 @@ jobs:
     #   uses: azure/arm-deploy@v1.0.8
     #   with:
     #     subscriptionId: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-    #     resourceGroupName: ${{ secrets.AZURE_RG }}
+    #     resourceGroupName: ${{ secrets.AZURE_B2C_RG }}
     #     template: ./fhir-api.bicep
     #     parameters: 'workspaceName=${{steps.get-unique-names.outputs.fhirWorkspaceName}} 
     #       fhirName=${{steps.get-unique-names.outputs.fhirName}}'
@@ -126,7 +126,7 @@ jobs:
       uses: azure/arm-deploy@v1.0.8
       with:
         subscriptionId: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-        resourceGroupName: ${{ secrets.AZURE_RG }}
+        resourceGroupName: ${{ secrets.AZURE_B2C_RG }}
         template: ${{ env.TEMP_DIR_PATH }}/${{ env.FHIR_PROXY_BICEP_NAME }}
         parameters: 'fhirProxyName=${{steps.set-fhir-proxy-app-name.outputs.fhirProxyAppName}}
           uniqueValue=${{needs.deploy-infra-fhir-service.outputs.uniqueSuffix}} 
@@ -143,9 +143,9 @@ jobs:
     - name: set-proxy-appsettings
       shell: bash
       run: |
-        az webapp config appsettings set -n "${{steps.set-fhir-proxy-app-name.outputs.fhirProxyAppName}}" -g "${{secrets.AZURE_RG}}" --settings FS-CLIENT-ID=''
-        az webapp config appsettings set -n "${{steps.set-fhir-proxy-app-name.outputs.fhirProxyAppName}}" -g "${{secrets.AZURE_RG}}" --settings FS-TENANT-NAME=''
-        az webapp config appsettings set -n "${{steps.set-fhir-proxy-app-name.outputs.fhirProxyAppName}}" -g "${{secrets.AZURE_RG}}" --settings FS-SECRET=''
+        az webapp config appsettings set -n "${{steps.set-fhir-proxy-app-name.outputs.fhirProxyAppName}}" -g "${{secrets.AZURE_B2C_RG}}" --settings FS-CLIENT-ID=''
+        az webapp config appsettings set -n "${{steps.set-fhir-proxy-app-name.outputs.fhirProxyAppName}}" -g "${{secrets.AZURE_B2C_RG}}" --settings FS-TENANT-NAME=''
+        az webapp config appsettings set -n "${{steps.set-fhir-proxy-app-name.outputs.fhirProxyAppName}}" -g "${{secrets.AZURE_B2C_RG}}" --settings FS-SECRET=''
 
       # Leverage the proxy's MSI and assign it with 'FHIR Data Contributor' rbac role to the fhir server 
       # Based on the fhir-api.bicep fhir resource name is using a format of '${workspaceName}/${fhirName}'
@@ -178,7 +178,7 @@ jobs:
     #   run: |
     #     az extension add --name authV2
 
-    #     rg=${{secrets.AZURE_RG}}
+    #     rg=${{secrets.AZURE_B2C_RG}}
     #     fhirProxyName=${{steps.set-fhir-proxy-app-name.outputs.fhirProxyAppName}}
     #     ezauthClientId=${{secrets.EZAUTH_FHIR_PROXY_AAD_CLIENTID}}
     #     ezauthClientSecret=${{secrets.EZAUTH_FHIR_PROXY_AAD_SECRET}}
